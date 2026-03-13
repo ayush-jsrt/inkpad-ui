@@ -4,150 +4,95 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Minimal Notes</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg: #09090b; --surface: #18181b; --border: #27272a; 
-      --text: #e4e4e7; --text-muted: #a1a1aa; --accent: #3b82f6;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
+    :root { --bg: #f9f9f9; --text: #333; --border: #ddd; --accent: #ff6b6b; --sidebar: #fff; }
+    body { margin: 0; font-family: 'Courier New', Courier, monospace; display: flex; height: 100vh; background: var(--bg); color: var(--text); }
     
-    /* Sidebar */
-    #sidebar {
-      width: 260px; background: var(--surface); border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; transition: transform 0.3s ease;
-    }
-    #sidebar.closed { transform: translateX(-100%); position: absolute; height: 100%; z-index: 10; }
-    .sidebar-header { padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
-    .new-btn { background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0.25rem 0.75rem; cursor: pointer; font-size: 1.1rem; }
-    .new-btn:hover { background: var(--border); }
-    #notesList { list-style: none; overflow-y: auto; flex: 1; padding: 1rem; }
-    #notesList li { margin-bottom: 0.5rem; }
-    #notesList a { color: var(--text-muted); text-decoration: none; display: block; padding: 0.5rem 0.75rem; border-radius: 6px; transition: all 0.2s; }
-    #notesList a:hover { background: var(--border); color: var(--text); }
-    #notesList a.active { background: var(--border); color: var(--accent); font-weight: 500; }
-
-    /* Main Content */
-    main { flex: 1; display: flex; flex-direction: column; transition: margin-left 0.3s ease; }
-    header { padding: 1.5rem 2rem; display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid var(--border); }
-    .toggle-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; padding: 0.5rem; border-radius: 6px; }
-    .toggle-btn:hover { background: var(--surface); color: var(--text); }
-    #noteTitle { font-weight: 600; font-size: 1.1rem; flex: 1; }
-    #status { font-size: 0.85rem; color: var(--text-muted); }
+    aside { width: 250px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+    .new-btn { background: var(--accent); color: white; border: none; padding: 4px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+    ul { list-style: none; padding: 0; margin: 0; overflow-y: auto; }
+    li a { display: block; padding: 0.75rem 1rem; text-decoration: none; color: var(--text); border-bottom: 1px solid var(--border); }
+    li a:hover { background: #f0f0f0; }
     
-    textarea {
-      flex: 1; background: transparent; color: var(--text); border: none; padding: 2rem; font-size: 1.1rem; 
-      line-height: 1.6; resize: none; font-family: inherit; width: 100%; max-width: 900px; margin: 0 auto;
-    }
-    textarea:focus { outline: none; }
-    
-    /* Scrollbars */
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+    main { flex: 1; display: flex; flex-direction: column; }
+    .topbar { padding: 1rem 2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; color: #888; }
+    textarea { flex: 1; border: none; padding: 2rem; font-family: inherit; font-size: 1.1rem; background: transparent; resize: none; outline: none; line-height: 1.5; }
   </style>
 </head>
 <body>
-
-  <aside id="sidebar">
-    <div class="sidebar-header">
-      Notes
-      <button class="new-btn" onclick="window.location.href='/new-note-'+Date.now().toString().slice(-4)">+</button>
-    </div>
+  <aside>
+    <div class="header">Notes <button class="new-btn" onclick="location.hash = 'note-' + Math.floor(Math.random()*10000)">+</button></div>
     <ul id="notesList"></ul>
   </aside>
-
+  
   <main>
-    <header>
-      <button class="toggle-btn" onclick="document.getElementById('sidebar').classList.toggle('closed')">☰</button>
-      <div id="noteTitle"></div>
-      <div id="status">Ready</div>
-    </header>
+    <div class="topbar"><span id="noteTitle"></span><span id="status">Ready</span></div>
     <textarea id="noteContent" placeholder="Start typing..."></textarea>
   </main>
 
   <script>
-    const API_URL = "https://api.ayush-jsrt.workers.dev"; 
+    const API = "YOUR_BACKEND_URL_HERE"; // Ensure no trailing slash
     
-    const path = window.location.pathname.replace(/^\/|\/$/g, "");
-    const noteName = path || "untitled";
-    
-    document.getElementById('noteTitle').textContent = "/" + noteName;
-    const contentEl = document.getElementById('noteContent');
-    const statusEl = document.getElementById('status');
-    const listEl = document.getElementById('notesList');
-    
-    let lastSavedContent = "";
-    let typingTimer;
+    const [contentEl, statusEl, listEl, titleEl] = ['noteContent', 'status', 'notesList', 'noteTitle'].map(id => document.getElementById(id));
+    let lastSaved = "", timer, noteName = "";
 
-    async function fetchNotesList() {
+    async function fetchAPI(path, opts = {}) {
       try {
-        const res = await fetch(`${API_URL}/notes`);
-        if (!res.ok) return;
-        const notes = await res.json();
-        listEl.innerHTML = notes.map(n => `
-          <li>
-            <a href="/${n.name}" class="${n.name === noteName ? 'active' : ''}">
-              ${n.name}
-            </a>
-          </li>
-        `).join('');
-      } catch (err) {
-        console.error("Failed to fetch note list");
-      }
+        const res = await fetch(API + path, opts);
+        return res.ok ? await res.json() : null;
+      } catch { return null; }
     }
 
-    async function loadNote() {
+    async function loadSidebar() {
+      const notes = await fetchAPI('/notes');
+      if (notes) listEl.innerHTML = notes.map(n => `<li><a href="#${n.name}">${n.name}</a></li>`).join('');
+    }
+
+    async function loadCurrentNote() {
+      // Get name from hash (e.g. #my-note -> my-note). Default to 'untitled'
+      noteName = window.location.hash.substring(1) || "untitled";
+      titleEl.textContent = "#" + noteName;
       statusEl.textContent = "Loading...";
-      try {
-        const res = await fetch(`${API_URL}/notes/${noteName}`);
-        if (res.ok) {
-          const data = await res.json();
-          contentEl.value = data.content || "";
-          lastSavedContent = contentEl.value;
-          statusEl.textContent = "All changes saved";
-        } else {
-          statusEl.textContent = "New Note";
-        }
-      } catch (err) {
-        statusEl.textContent = "Error loading";
-      }
-    }
+      contentEl.value = ""; 
 
-    async function saveNote() {
-      statusEl.textContent = "Saving...";
-      try {
-        const res = await fetch(`${API_URL}/notes/${noteName}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: contentEl.value })
-        });
-        if (res.ok) {
-          lastSavedContent = contentEl.value;
-          statusEl.textContent = "All changes saved";
-          fetchNotesList(); // Refresh list in case this is a new note
-        } else {
-          throw new Error();
-        }
-      } catch (err) {
-        statusEl.textContent = "Error saving";
+      const note = await fetchAPI(`/notes/${noteName}`);
+      if (note) { 
+        contentEl.value = lastSaved = note.content; 
+        statusEl.textContent = "Loaded"; 
+      } else {
+        lastSaved = "";
+        statusEl.textContent = "New Note";
       }
     }
 
     contentEl.addEventListener('input', () => {
-      statusEl.textContent = "Unsaved changes...";
-      clearTimeout(typingTimer);
-      typingTimer = setTimeout(() => {
-        if (contentEl.value !== lastSavedContent) saveNote();
+      statusEl.textContent = "Typing...";
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        if (contentEl.value === lastSaved) return;
+        statusEl.textContent = "Saving...";
+        
+        const res = await fetch(API + `/notes/${noteName}`, { 
+          method: 'PUT', 
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({content: contentEl.value}) 
+        });
+        
+        if (res.ok) { 
+          lastSaved = contentEl.value; 
+          statusEl.textContent = "Saved";
+          loadSidebar(); 
+        }
       }, 5000);
     });
 
-    loadNote();
-    fetchNotesList();
+    // Listen for hash changes to swap notes without reloading the page
+    window.addEventListener('hashchange', loadCurrentNote);
+
+    // Initial load
+    loadSidebar();
+    loadCurrentNote();
   </script>
 </body>
 </html>
