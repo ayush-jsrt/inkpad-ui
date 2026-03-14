@@ -5,19 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Minimal Notes</title>
   <style>
-    :root { --bg: #f9f9f9; --text: #333; --border: #ddd; --accent: #ff6b6b; --sidebar: #fff; }
-    body { margin: 0; font-family: 'Courier New', Courier, monospace; display: flex; height: 100vh; background: var(--bg); color: var(--text); }
+    :root { --bg: #121212; --text: #e0e0e0; --border: #333; --accent: #3b82f6; --sidebar: #1e1e1e; }
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; display: flex; height: 100vh; background: var(--bg); color: var(--text); }
     
     aside { width: 250px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
     .header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
     .new-btn { background: var(--accent); color: white; border: none; padding: 4px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+    .new-btn:hover { background: #2563eb; }
     ul { list-style: none; padding: 0; margin: 0; overflow-y: auto; }
-    li a { display: block; padding: 0.75rem 1rem; text-decoration: none; color: var(--text); border-bottom: 1px solid var(--border); }
-    li a:hover { background: #f0f0f0; }
+    li { display: flex; align-items: center; border-bottom: 1px solid var(--border); transition: background 0.2s; }
+    li:hover { background: #2c2c2c; }
+    li a { flex: 1; padding: 0.75rem 1rem; text-decoration: none; color: var(--text); }
+    .del-btn { background: none; border: none; color: #666; font-size: 1.2rem; cursor: pointer; padding: 0 1rem; }
+    .del-btn:hover { color: #ff6b6b; }
     
     main { flex: 1; display: flex; flex-direction: column; }
     .topbar { padding: 1rem 2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; color: #888; }
-    textarea { flex: 1; border: none; padding: 2rem; font-family: inherit; font-size: 1.1rem; background: transparent; resize: none; outline: none; line-height: 1.5; }
+    textarea { flex: 1; border: none; padding: 2rem; font-family: inherit; font-size: 1.1rem; background: transparent; color: var(--text); resize: none; outline: none; line-height: 1.5; }
+    
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--sidebar); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
   </style>
 </head>
 <body>
@@ -32,7 +41,7 @@
   </main>
 
   <script>
-    const API = "https://api.ayush-jsrt.workers.dev"; // Ensure no trailing slash
+    const API = "https://api.ayush-jsrt.workers.dev"; 
     
     const [contentEl, statusEl, listEl, titleEl] = ['noteContent', 'status', 'notesList', 'noteTitle'].map(id => document.getElementById(id));
     let lastSaved = "", timer, noteName = "";
@@ -46,11 +55,26 @@
 
     async function loadSidebar() {
       const notes = await fetchAPI('/notes');
-      if (notes) listEl.innerHTML = notes.map(n => `<li><a href="#${n.name}">${n.name}</a></li>`).join('');
+      if (notes) {
+        listEl.innerHTML = notes.map(n => `
+          <li>
+            <a href="#${n.name}">${n.name}</a>
+            <button class="del-btn" onclick="deleteNote('${n.name}')" title="Delete note">×</button>
+          </li>
+        `).join('');
+      }
+    }
+
+    async function deleteNote(name) {
+      if (!confirm(`Delete '${name}'?`)) return;
+      await fetch(API + `/notes/${name}`, { method: 'DELETE' });
+      if (noteName === name) {
+        location.hash = ''; 
+      }
+      loadSidebar();
     }
 
     async function loadCurrentNote() {
-      // Get name from hash (e.g. #my-note -> my-note). Default to 'untitled'
       noteName = window.location.hash.substring(1) || "untitled";
       titleEl.textContent = "#" + noteName;
       statusEl.textContent = "Loading...";
@@ -87,10 +111,8 @@
       }, 5000);
     });
 
-    // Listen for hash changes to swap notes without reloading the page
     window.addEventListener('hashchange', loadCurrentNote);
 
-    // Initial load
     loadSidebar();
     loadCurrentNote();
   </script>
